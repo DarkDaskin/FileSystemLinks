@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 
 namespace FileSystemLinks;
 
-internal class WindowsFileSystem : IFileSystem
+internal partial class WindowsFileSystem : IFileSystem
 {
     public void CreateHardLink(string sourceFileName, string destFileName)
     {
@@ -18,6 +18,9 @@ internal class WindowsFileSystem : IFileSystem
 
     private static void CreateSymbolicLink(string path, string pathToTarget, bool isDirectory)
     {
+        path = PathInternal.EnsureExtendedPrefixIfNeeded(path);
+        pathToTarget = PathInternal.EnsureExtendedPrefixIfNeeded(pathToTarget);
+
         SymbolicLinkFlags flags = 0;
         if (isDirectory)
             flags |= SymbolicLinkFlags.SYMBOLIC_LINK_FLAG_DIRECTORY;

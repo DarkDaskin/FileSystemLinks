@@ -16,6 +16,10 @@ public class TestBase
     public static void Initialize(TestContext context)
     {
         WorkDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+#if NETCOREAPP1_0_OR_GREATER || NET462_OR_GREATER
+        var longDirectoryName = new string('a', 200);
+        WorkDirectoryPath = Path.Combine(WorkDirectoryPath, longDirectoryName, longDirectoryName);
+#endif
         Directory.CreateDirectory(WorkDirectoryPath);
 
         Environment.CurrentDirectory = WorkDirectoryPath;
@@ -54,6 +58,7 @@ public class TestBase
         return true;
 #else
         Assert.Inconclusive();
+        return false;
 #endif
     }
 
