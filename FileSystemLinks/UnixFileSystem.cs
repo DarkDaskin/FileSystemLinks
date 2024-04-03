@@ -12,6 +12,18 @@ internal class UnixFileSystem : IFileSystem
             ThrowExceptionForLastError(false);
     }
 
+    public void CreateFileSymbolicLink(string path, string pathToTarget)
+    {
+        if (CreateSymbolicLinkNative(pathToTarget, path) != 0)
+            ThrowExceptionForLastError(false);
+    }
+
+    public void CreateDirectorySymbolicLink(string path, string pathToTarget)
+    {
+        if (CreateSymbolicLinkNative(pathToTarget, path) != 0)
+            ThrowExceptionForLastError(true);
+    }
+
     private static void ThrowExceptionForLastError(bool isDirectory)
     {
         var errorCode = Marshal.GetLastWin32Error();
@@ -25,6 +37,8 @@ internal class UnixFileSystem : IFileSystem
                 throw new FileNotFoundException(message);
             case ErrorCode.EACCES:
                 throw new UnauthorizedAccessException(message);
+            case ErrorCode.ENAMETOOLONG:
+                throw new PathTooLongException(message);
             default:
                 throw new IOException(message);
         }
@@ -32,6 +46,9 @@ internal class UnixFileSystem : IFileSystem
 
     [DllImport("libc", EntryPoint = "link", CharSet = CharSet.Ansi, SetLastError = true)]
     private static extern int CreateHardLinkNative(string oldpath, string newpath);
+
+    [DllImport("libc", EntryPoint = "symlink", CharSet = CharSet.Ansi, SetLastError = true)]
+    private static extern int CreateSymbolicLinkNative(string target, string linkpath);
 
     [DllImport("libc", EntryPoint = "strerror")]
     private static extern IntPtr GetErrorMessageNative(int errnum);
@@ -41,6 +58,7 @@ internal class UnixFileSystem : IFileSystem
         // ReSharper disable InconsistentNaming
         ENOENT = 2,
         EACCES = 13,
+        ENAMETOOLONG = 36,
         // ReSharper restore InconsistentNaming
     }
 }

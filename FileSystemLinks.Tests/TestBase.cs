@@ -18,6 +18,8 @@ public class TestBase
         WorkDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
         Directory.CreateDirectory(WorkDirectoryPath);
 
+        Environment.CurrentDirectory = WorkDirectoryPath;
+
         DifferentFileSystemWorkDirectoryPath = Environment.OSVersion.Platform switch
         {
             PlatformID.Win32NT => @"E:\Temp\FileSystemLinksTests",
@@ -31,6 +33,8 @@ public class TestBase
     [AssemblyCleanup]
     public static void Cleanup()
     {
+        Environment.CurrentDirectory = Path.GetTempPath();
+
         Directory.Delete(WorkDirectoryPath, true);
 
         if (DifferentFileSystemWorkDirectoryPath is not null)
