@@ -20,6 +20,8 @@ public class CreateFileSymbolicLinkTests : TestBase
         Assert.IsTrue(link.Exists);
 #if NET6_0_OR_GREATER
         Assert.AreEqual(targetFileName, link.LinkTarget);
+#else
+        Assert.AreEqual(targetFileName, FileSystemLink.GetFileLinkTarget(linkFileName));
 #endif
 
         File.WriteAllText(targetFileName, "test2");
@@ -43,6 +45,8 @@ public class CreateFileSymbolicLinkTests : TestBase
         Assert.IsTrue(link.Exists);
 #if NET6_0_OR_GREATER
         Assert.AreEqual(targetFileName, link.LinkTarget);
+#else
+        Assert.AreEqual(targetFileName, FileSystemLink.GetFileLinkTarget(linkFileName));
 #endif
 
         File.WriteAllText(targetFileName, "test2");
@@ -54,7 +58,7 @@ public class CreateFileSymbolicLinkTests : TestBase
     public void WhenPathsAreCorrectAndRelativePathTargetExists_CreateSymbolicLink()
     {
         var targetFileName = UnicodeString + Path.GetRandomFileName();
-        var linkFileName = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
+        var linkFileName = UnicodeString + Path.GetRandomFileName();
         File.WriteAllText(targetFileName, "test");
 
         Assert.IsTrue(File.Exists(targetFileName));
@@ -67,6 +71,8 @@ public class CreateFileSymbolicLinkTests : TestBase
         Assert.IsTrue(link.Exists);
 #if NET6_0_OR_GREATER
         Assert.AreEqual(targetFileName, link.LinkTarget);
+#else
+        Assert.AreEqual(targetFileName, FileSystemLink.GetFileLinkTarget(linkFileName));
 #endif
 
         File.WriteAllText(targetFileName, "test2");
@@ -78,7 +84,7 @@ public class CreateFileSymbolicLinkTests : TestBase
     public void WhenPathsAreCorrectAndRelativePathTargetDoesNotExist_CreateSymbolicLink()
     {
         var targetFileName = UnicodeString + Path.GetRandomFileName();
-        var linkFileName = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
+        var linkFileName = UnicodeString + Path.GetRandomFileName();
 
         Assert.IsFalse(File.Exists(targetFileName));
         Assert.IsFalse(File.Exists(linkFileName));
@@ -90,6 +96,8 @@ public class CreateFileSymbolicLinkTests : TestBase
         Assert.IsTrue(link.Exists);
 #if NET6_0_OR_GREATER
         Assert.AreEqual(targetFileName, link.LinkTarget);
+#else
+        Assert.AreEqual(targetFileName, FileSystemLink.GetFileLinkTarget(linkFileName));
 #endif
 
         File.WriteAllText(targetFileName, "test2");

@@ -12,9 +12,13 @@ internal partial class WindowsFileSystem
         private const char DirectorySeparatorChar = '\\';
         private const char AltDirectorySeparatorChar = '/';
         private const char VolumeSeparatorChar = ':';
+        // ReSharper disable once InconsistentNaming
+        public const string NTPathPrefix = @"\??\";
         private const string ExtendedPathPrefix = @"\\?\";
-        private const string UncPathPrefix = @"\\";
+        public const string UncPathPrefix = @"\\";
         private const string UncExtendedPrefixToInsert = @"?\UNC\";
+        // ReSharper disable once InconsistentNaming
+        public const string UncNTPathPrefix = @"\??\UNC\";
         private const int MaxShortPath = 260;
         // \\?\, \\.\, \??\
         private const int DevicePrefixLength = 4;
@@ -85,7 +89,7 @@ internal partial class WindowsFileSystem
         /// for C: (rooted, but relative). "C:\a" is rooted and not relative (the current directory
         /// will not be used to modify the path).
         /// </remarks>
-        private static bool IsPartiallyQualified(string path)
+        public static bool IsPartiallyQualified(string path)
         {
             if (path.Length < 2)
             {

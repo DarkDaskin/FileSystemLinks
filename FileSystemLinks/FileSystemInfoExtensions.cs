@@ -13,19 +13,24 @@ public static class FileSystemInfoExtensions
         FileSystemLink.CreateHardLink(fileInfo.FullName, destFileName);
     }
 
-    public static void CreateAsSymbolicLink(this FileInfo fileInfo, string pathToTarget)
+    public static void CreateAsSymbolicLink(this FileSystemInfo fileSystemInfo, string pathToTarget)
     {
-        if (fileInfo is null)
-            throw new ArgumentNullException(nameof(fileInfo));
+        if (fileSystemInfo is null)
+            throw new ArgumentNullException(nameof(fileSystemInfo));
 
-        FileSystemLink.CreateFileSymbolicLink(fileInfo.FullName, pathToTarget);
+        if (fileSystemInfo is DirectoryInfo)
+            FileSystemLink.CreateDirectorySymbolicLink(fileSystemInfo.FullName, pathToTarget);
+        else
+            FileSystemLink.CreateFileSymbolicLink(fileSystemInfo.FullName, pathToTarget);
     }
 
-    public static void CreateAsSymbolicLink(this DirectoryInfo directoryInfo, string pathToTarget)
+    public static string? GetLinkTarget(this FileSystemInfo fileSystemInfo)
     {
-        if (directoryInfo is null)
-            throw new ArgumentNullException(nameof(directoryInfo));
+        if (fileSystemInfo is null)
+            throw new ArgumentNullException(nameof(fileSystemInfo));
 
-        FileSystemLink.CreateDirectorySymbolicLink(directoryInfo.FullName, pathToTarget);
+        return fileSystemInfo is DirectoryInfo
+            ? FileSystemLink.GetDirectoryLinkTarget(fileSystemInfo.FullName)
+            : FileSystemLink.GetFileLinkTarget(fileSystemInfo.FullName);
     }
 }

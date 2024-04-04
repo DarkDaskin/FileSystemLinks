@@ -4,10 +4,30 @@ namespace FileSystemLinks.Tests;
 public class CreateHardLinkTests : TestBase
 {
     [TestMethod]
-    public void WhenSourceAndDestFileNamesAreCorrect_CreateHardLink()
+    public void WhenSourceAndDestFileNamesAreCorrectAndAbsolute_CreateHardLink()
     {
         var sourceFileName = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
         var destFileName = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
+        File.WriteAllText(sourceFileName, "test");
+
+        Assert.IsTrue(File.Exists(sourceFileName));
+        Assert.IsFalse(File.Exists(destFileName));
+
+        FileSystemLink.CreateHardLink(sourceFileName, destFileName);
+
+        Assert.IsTrue(File.Exists(sourceFileName));
+        Assert.IsTrue(File.Exists(destFileName));
+
+        File.WriteAllText(sourceFileName, "test2");
+
+        Assert.AreEqual("test2", File.ReadAllText(destFileName));
+    }
+
+    [TestMethod]
+    public void WhenSourceAndDestFileNamesAreCorrectAndRelative_CreateHardLink()
+    {
+        var sourceFileName = UnicodeString + Path.GetRandomFileName();
+        var destFileName = UnicodeString + Path.GetRandomFileName();
         File.WriteAllText(sourceFileName, "test");
 
         Assert.IsTrue(File.Exists(sourceFileName));

@@ -4,9 +4,6 @@ namespace FileSystemLinks;
 
 public static class FileSystemLink
 {
-    private const string EmptyFileNameExceptionMessage = "Empty file name is not legal.";
-    private const string EmptyPathExceptionMessage = "Path cannot be the empty string or all whitespace.";
-
     private static readonly IFileSystem FileSystem;
 
     static FileSystemLink()
@@ -21,43 +18,49 @@ public static class FileSystemLink
 
     public static void CreateHardLink(string sourceFileName, string destFileName)
     {
-        if (sourceFileName is null)
-            throw new ArgumentNullException(nameof(sourceFileName));
-        if (string.IsNullOrWhiteSpace(sourceFileName))
-            throw new ArgumentException(EmptyFileNameExceptionMessage, nameof(sourceFileName));
-        if (destFileName is null)
-            throw new ArgumentNullException(nameof(destFileName));
-        if (string.IsNullOrWhiteSpace(destFileName))
-            throw new ArgumentException(EmptyFileNameExceptionMessage, nameof(destFileName));
+        VerifyValidPath(sourceFileName, nameof(sourceFileName));
+        VerifyValidPath(destFileName, nameof(destFileName));
 
         FileSystem.CreateHardLink(sourceFileName, destFileName);
     }
 
     public static void CreateFileSymbolicLink(string path, string pathToTarget)
     {
-        if (path is null)
-            throw new ArgumentNullException(nameof(path));
-        if (string.IsNullOrWhiteSpace(path))
-            throw new ArgumentException(EmptyPathExceptionMessage, nameof(path));
-        if (pathToTarget is null)
-            throw new ArgumentNullException(nameof(pathToTarget));
-        if (string.IsNullOrWhiteSpace(pathToTarget))
-            throw new ArgumentException(EmptyPathExceptionMessage, nameof(pathToTarget));
+        VerifyValidPath(path, nameof(path));
+        VerifyValidPath(pathToTarget, nameof(pathToTarget));
 
-        FileSystem.CreateFileSymbolicLink(path, pathToTarget);
+        FileSystem.CreateSymbolicLink(path, pathToTarget, false);
     }
 
     public static void CreateDirectorySymbolicLink(string path, string pathToTarget)
     {
+        VerifyValidPath(path, nameof(path));
+        VerifyValidPath(pathToTarget, nameof(pathToTarget));
+
+        FileSystem.CreateSymbolicLink(path, pathToTarget, true);
+    }
+
+    public static string? GetFileLinkTarget(string path)
+    {
+        VerifyValidPath(path, nameof(path));
+
+        return FileSystem.GetLinkTarget(path, false);
+    }
+
+    public static string? GetDirectoryLinkTarget(string path)
+    {
+        VerifyValidPath(path, nameof(path));
+
+        return FileSystem.GetLinkTarget(path, true);
+    }
+
+    private static void VerifyValidPath(string path, string argName)
+    {
         if (path is null)
             throw new ArgumentNullException(nameof(path));
         if (string.IsNullOrWhiteSpace(path))
-            throw new ArgumentException(EmptyPathExceptionMessage, nameof(path));
-        if (pathToTarget is null)
-            throw new ArgumentNullException(nameof(pathToTarget));
-        if (string.IsNullOrWhiteSpace(pathToTarget))
-            throw new ArgumentException(EmptyPathExceptionMessage, nameof(pathToTarget));
-
-        FileSystem.CreateDirectorySymbolicLink(path, pathToTarget);
+            throw new ArgumentException("The path is empty.", nameof(path));
+        if (path.Contains("\0"))
+            throw new ArgumentException("Illegal characters in path.", argName);
     }
 }
