@@ -11,17 +11,18 @@ public class TestBase
 
     protected static string WorkDirectoryPath = null!;
     protected static string? DifferentFileSystemWorkDirectoryPath;
+    private static string _workDirectoryBasePath = null!;
 
     [AssemblyInitialize]
     public static void Initialize(TestContext context)
     {
-        var workDirectoryBasePath = WorkDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        _workDirectoryBasePath = WorkDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 #if NETCOREAPP1_0_OR_GREATER || NET462_OR_GREATER
         var longDirectoryName = new string('a', 200);
         WorkDirectoryPath = Path.Combine(WorkDirectoryPath, longDirectoryName, longDirectoryName);
 #endif
 
-        Directory.CreateDirectory(workDirectoryBasePath);
+        Directory.CreateDirectory(_workDirectoryBasePath);
 
         try
         {
@@ -31,7 +32,7 @@ public class TestBase
         catch (PathTooLongException)
         {
             // On Windows only ReSharper could run tests with long paths, Visual Studio Test Explorer and dotnet test fail.
-            Environment.CurrentDirectory = WorkDirectoryPath = workDirectoryBasePath;
+            Environment.CurrentDirectory = WorkDirectoryPath = _workDirectoryBasePath;
         }
 
         DifferentFileSystemWorkDirectoryPath = Environment.OSVersion.Platform switch
@@ -49,7 +50,7 @@ public class TestBase
     {
         Environment.CurrentDirectory = Path.GetTempPath();
 
-        Directory.Delete(WorkDirectoryPath, true);
+        Directory.Delete(_workDirectoryBasePath, true);
 
         if (DifferentFileSystemWorkDirectoryPath is not null)
         {
