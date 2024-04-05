@@ -15,14 +15,24 @@ public class TestBase
     [AssemblyInitialize]
     public static void Initialize(TestContext context)
     {
-        WorkDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
+        var workDirectoryBasePath = WorkDirectoryPath = Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 #if NETCOREAPP1_0_OR_GREATER || NET462_OR_GREATER
         var longDirectoryName = new string('a', 200);
         WorkDirectoryPath = Path.Combine(WorkDirectoryPath, longDirectoryName, longDirectoryName);
 #endif
-        Directory.CreateDirectory(WorkDirectoryPath);
 
-        Environment.CurrentDirectory = WorkDirectoryPath;
+        Directory.CreateDirectory(workDirectoryBasePath);
+
+        try
+        {
+            Directory.CreateDirectory(WorkDirectoryPath);
+            Environment.CurrentDirectory = WorkDirectoryPath;
+        }
+        catch (PathTooLongException)
+        {
+            // On Windows only ReSharper could run tests with long paths, Visual Studio Test Explorer and dotnet test fail.
+            Environment.CurrentDirectory = WorkDirectoryPath = workDirectoryBasePath;
+        }
 
         DifferentFileSystemWorkDirectoryPath = Environment.OSVersion.Platform switch
         {
