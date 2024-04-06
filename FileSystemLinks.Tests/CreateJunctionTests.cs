@@ -1,12 +1,19 @@
 ﻿namespace FileSystemLinks.Tests;
 
 [TestClass]
-public class CreateDirectorySymbolicLinkTests : TestBase
+public class CreateJunctionTests : TestBase
 {
     private const string TestFileName = "test.txt";
 
+    [TestInitialize]
+    public void TestInitialize()
+    {
+        if (!IsWindows()) 
+            Assert.Inconclusive();
+    }
+
     [TestMethod]
-    public void WhenPathsAreCorrectAndAbsolutePathTargetExists_CreateSymbolicLink()
+    public void WhenPathsAreCorrectAndAbsolutePathTargetExists_CreateJunction()
     {
         var targetDirectoryPath = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
         var linkDirectoryPath = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
@@ -15,7 +22,7 @@ public class CreateDirectorySymbolicLinkTests : TestBase
         Assert.IsTrue(Directory.Exists(targetDirectoryPath));
         Assert.IsFalse(Directory.Exists(linkDirectoryPath));
 
-        FileSystemLink.CreateDirectorySymbolicLink(linkDirectoryPath, targetDirectoryPath);
+        FileSystemLink.CreateJunction(linkDirectoryPath, targetDirectoryPath);
         
         var link = new DirectoryInfo(linkDirectoryPath);
 
@@ -32,7 +39,7 @@ public class CreateDirectorySymbolicLinkTests : TestBase
     }
 
     [TestMethod]
-    public void WhenPathsAreCorrectAndAbsolutePathTargetDoesNotExist_CreateSymbolicLink()
+    public void WhenPathsAreCorrectAndAbsolutePathTargetDoesNotExist_CreateJunction()
     {
         var targetDirectoryPath = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
         var linkDirectoryPath = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
@@ -40,7 +47,7 @@ public class CreateDirectorySymbolicLinkTests : TestBase
         Assert.IsFalse(Directory.Exists(targetDirectoryPath));
         Assert.IsFalse(Directory.Exists(linkDirectoryPath));
 
-        FileSystemLink.CreateDirectorySymbolicLink(linkDirectoryPath, targetDirectoryPath);
+        FileSystemLink.CreateJunction(linkDirectoryPath, targetDirectoryPath);
 
         var link = new DirectoryInfo(linkDirectoryPath);
 
@@ -59,7 +66,7 @@ public class CreateDirectorySymbolicLinkTests : TestBase
     }
 
     [TestMethod]
-    public void WhenPathsAreCorrectAndRelativePathTargetExists_CreateSymbolicLink()
+    public void WhenPathsAreCorrectAndRelativePathTargetExists_CreateJunction()
     {
         var targetDirectoryPath = UnicodeString + Path.GetRandomFileName();
         var linkDirectoryPath = UnicodeString + Path.GetRandomFileName();
@@ -68,15 +75,15 @@ public class CreateDirectorySymbolicLinkTests : TestBase
         Assert.IsTrue(Directory.Exists(targetDirectoryPath));
         Assert.IsFalse(Directory.Exists(linkDirectoryPath));
 
-        FileSystemLink.CreateDirectorySymbolicLink(linkDirectoryPath, targetDirectoryPath);
+        FileSystemLink.CreateJunction(linkDirectoryPath, targetDirectoryPath);
 
         var link = new DirectoryInfo(linkDirectoryPath);
 
         Assert.IsTrue(link.Exists);
 #if NET6_0_OR_GREATER
-        Assert.AreEqual(targetDirectoryPath, link.LinkTarget);
+        Assert.AreEqual(Path.Combine(WorkDirectoryPath, targetDirectoryPath), link.LinkTarget);
 #else
-        Assert.AreEqual(targetDirectoryPath, FileSystemLink.GetDirectoryLinkTarget(linkDirectoryPath));
+        Assert.AreEqual(Path.Combine(WorkDirectoryPath, targetDirectoryPath), FileSystemLink.GetDirectoryLinkTarget(linkDirectoryPath));
 #endif
 
         File.WriteAllText(Path.Combine(targetDirectoryPath, TestFileName), "test2");
@@ -85,7 +92,7 @@ public class CreateDirectorySymbolicLinkTests : TestBase
     }
 
     [TestMethod]
-    public void WhenPathsAreCorrectAndRelativePathTargetDoesNotExist_CreateSymbolicLink()
+    public void WhenPathsAreCorrectAndRelativePathTargetDoesNotExist_CreateJunction()
     {
         var targetDirectoryPath = UnicodeString + Path.GetRandomFileName();
         var linkDirectoryPath = UnicodeString + Path.GetRandomFileName();
@@ -93,16 +100,16 @@ public class CreateDirectorySymbolicLinkTests : TestBase
         Assert.IsFalse(Directory.Exists(targetDirectoryPath));
         Assert.IsFalse(Directory.Exists(linkDirectoryPath));
 
-        FileSystemLink.CreateDirectorySymbolicLink(linkDirectoryPath, targetDirectoryPath);
+        FileSystemLink.CreateJunction(linkDirectoryPath, targetDirectoryPath);
 
         var link = new DirectoryInfo(linkDirectoryPath);
 
         // Dangling symbolic links are considered files in Unix.
         Assert.IsTrue(IsWindows() ? link.Exists : File.Exists(linkDirectoryPath));
 #if NET6_0_OR_GREATER
-        Assert.AreEqual(targetDirectoryPath, link.LinkTarget);
+        Assert.AreEqual(Path.Combine(WorkDirectoryPath, targetDirectoryPath), link.LinkTarget);
 #else
-        Assert.AreEqual(targetDirectoryPath, FileSystemLink.GetDirectoryLinkTarget(linkDirectoryPath));
+        Assert.AreEqual(Path.Combine(WorkDirectoryPath, targetDirectoryPath), FileSystemLink.GetDirectoryLinkTarget(linkDirectoryPath));
 #endif
 
         Directory.CreateDirectory(targetDirectoryPath);
@@ -111,21 +118,15 @@ public class CreateDirectorySymbolicLinkTests : TestBase
         Assert.AreEqual("test2", File.ReadAllText(Path.Combine(linkDirectoryPath, TestFileName)));
     }
 
-    [TestMethod]
-    public void WhenPathsAreCorrectAndTargetIsUnc_CreateSymbolicLinkOnWindows()
+    [TestMethod, ExpectedException(typeof(IOException))]
+    public void WhenPathsAreCorrectAndTargetIsUnc_Throw()
     {
-        if (!IsWindows())
-        {
-            Assert.Inconclusive();
-            return;
-        }
-
         var targetDirectoryPath = @"\\localhost\c$\directory";
         var linkDirectoryPath = UnicodeString + Path.GetRandomFileName();
 
         Assert.IsFalse(File.Exists(linkDirectoryPath));
 
-        FileSystemLink.CreateDirectorySymbolicLink(linkDirectoryPath, targetDirectoryPath);
+        FileSystemLink.CreateJunction(linkDirectoryPath, targetDirectoryPath);
 
         var link = new DirectoryInfo(linkDirectoryPath);
 
@@ -179,7 +180,7 @@ public class CreateDirectorySymbolicLinkTests : TestBase
         Assert.IsFalse(Directory.Exists(targetDirectoryPath));
         Assert.IsTrue(File.Exists(linkDirectoryPath));
 
-        FileSystemLink.CreateDirectorySymbolicLink(linkDirectoryPath, targetDirectoryPath);
+        FileSystemLink.CreateJunction(linkDirectoryPath, targetDirectoryPath);
     }
 
     [TestMethod, ExpectedException(typeof(UnauthorizedAccessException))]
@@ -193,7 +194,7 @@ public class CreateDirectorySymbolicLinkTests : TestBase
 
         try
         {
-            FileSystemLink.CreateDirectorySymbolicLink(linkDirectoryPath, targetDirectoryPath);
+            FileSystemLink.CreateJunction(linkDirectoryPath, targetDirectoryPath);
         }
         finally
         {

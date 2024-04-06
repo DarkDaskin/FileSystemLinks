@@ -24,6 +24,14 @@ public static class FileSystemInfoExtensions
             FileSystemLink.CreateFileSymbolicLink(fileSystemInfo.FullName, pathToTarget);
     }
 
+    public static void CreateAsJunction(this DirectoryInfo directoryInfo, string pathToTarget)
+    {
+        if (directoryInfo is null)
+            throw new ArgumentNullException(nameof(directoryInfo));
+
+        FileSystemLink.CreateJunction(directoryInfo.FullName, pathToTarget);
+    }
+
     public static string? GetLinkTarget(this FileSystemInfo fileSystemInfo)
     {
         if (fileSystemInfo is null)

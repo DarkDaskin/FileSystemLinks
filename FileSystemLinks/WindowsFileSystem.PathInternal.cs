@@ -139,7 +139,7 @@ internal partial class WindowsFileSystem
         /// <summary>
         /// Returns true if the path uses any of the DOS device path syntaxes. ("\\.\", "\\?\", or "\??\")
         /// </summary>
-        private static bool IsDevice(string path)
+        public static bool IsDevice(string path)
         {
             // If the path begins with any two separators is will be recognized and normalized and prepped with
             // "\??\" for internal usage correctly. "\??\" is recognized and handled, "/??/" is not.

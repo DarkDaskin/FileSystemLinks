@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
+using System.Text;
 using Microsoft.Win32.SafeHandles;
 
 namespace FileSystemLinks;
@@ -33,6 +34,114 @@ internal partial class WindowsFileSystem : IFileSystem
             throw GetExceptionForLastWin32Error(isDirectory);
     }
 
+    public void CreateJunction(string path, string pathToTarget)
+    {
+        if (IsUncPath(pathToTarget)) 
+            throw GetExceptionForWin32Error(ERROR_NOT_SUPPORTED, true);
+
+        path = PathInternal.EnsureExtendedPrefixIfNeeded(path);
+        pathToTarget = Path.GetFullPath(pathToTarget);
+
+        using (var findHandle = FindFirstFileNative(path, out _))
+        {
+            if (!findHandle.IsInvalid)
+                throw GetExceptionForWin32Error(ERROR_ALREADY_EXISTS, true);
+        }
+
+        Directory.CreateDirectory(path);
+
+        using var handle = OpenSafeFileHandle(path, FileAccess.Write,
+            CreateFileFlags.FILE_FLAG_OPEN_REPARSE_POINT | CreateFileFlags.FILE_FLAG_BACKUP_SEMANTICS);
+        if (handle.IsInvalid)
+        {
+            Directory.Delete(path);
+
+            throw GetExceptionForLastWin32Error(true);
+        }
+
+        var substituteName = EnsureNTPrefix(pathToTarget);
+        var substituteNameLengthBytes = substituteName.Length * sizeof(char);
+        var printName = pathToTarget;
+        var printNameLengthBytes = printName.Length * sizeof(char);
+        var nullChar = new[] { '\0' };
+        const int nullCharLengthBytes = sizeof(char);
+        var junctionData = new JunctionData
+        {
+            SubstituteNameOffset = 0,
+            SubstituteNameLength = checked((ushort)substituteNameLengthBytes),
+            PrintNameOffset = checked((ushort)(substituteNameLengthBytes + nullCharLengthBytes)),
+            PrintNameLength = checked((ushort)printNameLengthBytes),
+        };
+        var reparseHeader = new ReparseHeader
+        {
+            ReparseTag = IO_REPARSE_TAG_MOUNT_POINT,
+            ReparseDataLength = checked((ushort)
+                (Marshal.SizeOf<JunctionData>() + substituteNameLengthBytes + printNameLengthBytes + 2 * nullCharLengthBytes)),
+        };
+        var bufferLength = Marshal.SizeOf<ReparseHeader>() + reparseHeader.ReparseDataLength;
+        var buffer = Marshal.AllocHGlobal(bufferLength);
+        var offset = 0;
+        try
+        {
+            Marshal.StructureToPtr(reparseHeader, buffer + offset, false);
+            offset += Marshal.SizeOf<ReparseHeader>();
+            Marshal.StructureToPtr(junctionData, buffer + offset, false);
+            offset += Marshal.SizeOf<JunctionData>();
+            Marshal.Copy(substituteName.ToCharArray(), 0, buffer + offset, substituteName.Length);
+            offset += substituteNameLengthBytes;
+            Marshal.Copy(nullChar, 0, buffer + offset, nullChar.Length);
+            offset += nullCharLengthBytes;
+            Marshal.Copy(printName.ToCharArray(), 0, buffer + offset, printName.Length);
+            offset += printNameLengthBytes;
+            Marshal.Copy(nullChar, 0, buffer + offset, nullChar.Length);
+            offset += nullCharLengthBytes;
+            Debug.Assert(offset == bufferLength);
+
+            var success = DeviceIoControlNative(handle, FSCTL_SET_REPARSE_POINT, buffer, bufferLength, IntPtr.Zero, 0, out _, IntPtr.Zero);
+            if (!success)
+                throw GetExceptionForLastWin32Error(true);
+        }
+        catch
+        {
+            Directory.Delete(path);
+
+            throw;
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(buffer);
+        }
+
+    }
+
+    private static bool IsUncPath(string path)
+    {
+        if (path.StartsWith(PathInternal.UncNTPathPrefix))
+            return true;
+
+        if (PathInternal.IsDevice(path))
+            return false;
+
+        return path.StartsWith(PathInternal.UncPathPrefix);
+    }
+
+    // ReSharper disable once InconsistentNaming
+    private static string EnsureNTPrefix(string path)
+    {
+        if (path.StartsWith(PathInternal.NTPathPrefix))
+            return path;
+
+        var sb = new StringBuilder(path);
+        if (PathInternal.IsDevice(path))
+        {
+            sb[1] = '?';
+            sb[2] = '?';
+        }
+        else
+            sb.Insert(0, PathInternal.NTPathPrefix);
+        return sb.ToString();
+    }
+
     public string? GetLinkTarget(string linkPath, bool isDirectory) =>
         GetImmediateLinkTarget(linkPath, isDirectory, throwOnError: false, returnFullPath: false);
 
@@ -50,7 +159,7 @@ internal partial class WindowsFileSystem : IFileSystem
     private static string? GetImmediateLinkTarget(string linkPath, bool isDirectory, bool throwOnError, bool returnFullPath)
     {
         var linkPathExtended = PathInternal.EnsureExtendedPrefixIfNeeded(linkPath);
-        using var handle = OpenSafeFileHandle(linkPathExtended, CreateFileFlags.FILE_FLAG_BACKUP_SEMANTICS | CreateFileFlags.FILE_FLAG_OPEN_REPARSE_POINT);
+        using var handle = OpenSafeFileHandle(linkPathExtended, 0, CreateFileFlags.FILE_FLAG_BACKUP_SEMANTICS | CreateFileFlags.FILE_FLAG_OPEN_REPARSE_POINT);
 
         if (handle.IsInvalid)
         {
@@ -87,7 +196,7 @@ internal partial class WindowsFileSystem : IFileSystem
             {
                 var reparseData = Marshal.PtrToStructure<SymbolicLinkData>(buffer + offset);
                 offset += Marshal.SizeOf<SymbolicLinkData>() + reparseData.SubstituteNameOffset;
-                var targetPath = Marshal.PtrToStringUni(buffer + offset, reparseData.SubstituteNameLength / 2);
+                var targetPath = Marshal.PtrToStringUni(buffer + offset, reparseData.SubstituteNameLength / sizeof(char));
                 var isRelative = (reparseData.Flags & SYMLINK_FLAG_RELATIVE) != 0;
 
                 if (!isRelative)
@@ -106,7 +215,7 @@ internal partial class WindowsFileSystem : IFileSystem
             {
                 var reparseData = Marshal.PtrToStructure<JunctionData>(buffer + offset);
                 offset += Marshal.SizeOf<JunctionData>() + reparseData.SubstituteNameOffset;
-                var targetPath = Marshal.PtrToStringUni(buffer + offset, reparseData.SubstituteNameLength);
+                var targetPath = Marshal.PtrToStringUni(buffer + offset, reparseData.SubstituteNameLength / sizeof(char));
 
                 // Unlike symbolic links, mount point paths cannot be relative.
                 Debug.Assert(!PathInternal.IsPartiallyQualified(targetPath));
@@ -146,7 +255,7 @@ internal partial class WindowsFileSystem : IFileSystem
         }
 
         // We try to open the final file since they asked for the final target.
-        using var handle = OpenSafeFileHandle(linkPath,CreateFileFlags.FILE_FLAG_BACKUP_SEMANTICS);
+        using var handle = OpenSafeFileHandle(linkPath, 0,CreateFileFlags.FILE_FLAG_BACKUP_SEMANTICS);
 
         if (handle.IsInvalid)
         {
@@ -230,8 +339,8 @@ internal partial class WindowsFileSystem : IFileSystem
         }
     }
 
-    private static SafeFileHandle OpenSafeFileHandle(string path, CreateFileFlags flags) => CreateFileNative(path, 0,
-            FileShare.ReadWrite | FileShare.Delete, IntPtr.Zero, FileMode.Open, (uint)flags);
+    private static SafeFileHandle OpenSafeFileHandle(string path, FileAccess access, CreateFileFlags flags) => CreateFileNative(path,
+        access, FileShare.ReadWrite | FileShare.Delete, IntPtr.Zero, FileMode.Open, (uint)flags);
 
     internal static bool IsPathUnreachableError(int errorCode)
     {
@@ -375,6 +484,7 @@ internal partial class WindowsFileSystem : IFileSystem
     private const int MAXIMUM_REPARSE_DATA_BUFFER_SIZE = 16 * 1024;
 
     private const uint FSCTL_GET_REPARSE_POINT = 0x000900A8;
+    private const uint FSCTL_SET_REPARSE_POINT = 0x000900A4;
 
     private const uint IO_REPARSE_TAG_MOUNT_POINT = 0xA0000003;
     private const uint IO_REPARSE_TAG_SYMLINK = 0xA000000C;
@@ -384,11 +494,13 @@ internal partial class WindowsFileSystem : IFileSystem
     private const int ERROR_PATH_NOT_FOUND = 0x3;
     private const int ERROR_INVALID_HANDLE = 0x6;
     private const int ERROR_NOT_READY = 0x15;
+    private const int ERROR_NOT_SUPPORTED = 0x32;
     private const int ERROR_BAD_NETPATH = 0x35;
     private const int ERROR_NETWORK_ACCESS_DENIED = 0x41;
     private const int ERROR_BAD_NET_NAME = 0x43;
     private const int ERROR_INVALID_PARAMETER = 0x57;
     private const int ERROR_INVALID_NAME = 0x7B;
+    private const int ERROR_ALREADY_EXISTS = 0xB7;
     private const int ERROR_BAD_PATHNAME = 0xA1;
     private const int ERROR_FILENAME_EXCED_RANGE = 0xCE;
     private const int ERROR_NETWORK_UNREACHABLE = 0x4CF;

@@ -50,6 +50,10 @@ public class TestBase
     {
         Environment.CurrentDirectory = Path.GetTempPath();
 
+        foreach (var directory in new DirectoryInfo(WorkDirectoryPath).EnumerateDirectories("*", SearchOption.AllDirectories))
+            if ((directory.Attributes & FileAttributes.ReparsePoint) != 0)
+                directory.Delete();
+
         Directory.Delete(_workDirectoryBasePath, true);
 
         if (DifferentFileSystemWorkDirectoryPath is not null)

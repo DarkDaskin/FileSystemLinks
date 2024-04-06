@@ -23,6 +23,8 @@ internal partial class UnixFileSystem : IFileSystem
             throw GetExceptionForLastError(isDirectory);
     }
 
+    public void CreateJunction(string path, string pathToTarget) => throw new PlatformNotSupportedException();
+
     public string? GetLinkTarget(string linkPath, bool isDirectory) => ReadLink(linkPath);
 
     public string? ResolveLinkTarget(string linkPath, bool returnFinalTarget, bool isDirectory)

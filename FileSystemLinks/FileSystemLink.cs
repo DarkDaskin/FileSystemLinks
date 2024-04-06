@@ -41,6 +41,14 @@ public static class FileSystemLink
         FileSystem.CreateSymbolicLink(path, pathToTarget, true);
     }
 
+    public static void CreateJunction(string path, string pathToTarget)
+    {
+        VerifyValidPath(path, nameof(path));
+        VerifyValidPath(pathToTarget, nameof(pathToTarget));
+
+        FileSystem.CreateJunction(path, pathToTarget);
+    }
+
     public static string? GetFileLinkTarget(string linkPath)
     {
         VerifyValidPath(linkPath, nameof(linkPath));

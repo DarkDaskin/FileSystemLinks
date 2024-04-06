@@ -105,6 +105,32 @@ public class CreateFileSymbolicLinkTests : TestBase
         Assert.AreEqual("test2", File.ReadAllText(linkFileName));
     }
 
+    [TestMethod]
+    public void WhenPathsAreCorrectAndTargetIsUnc_CreateSymbolicLinkOnWindows()
+    {
+        if (!IsWindows())
+        {
+            Assert.Inconclusive();
+            return;
+        }
+
+        var targetFileName = @"\\localhost\c$\file";
+        var linkFileName = UnicodeString + Path.GetRandomFileName();
+
+        Assert.IsFalse(File.Exists(linkFileName));
+
+        FileSystemLink.CreateFileSymbolicLink(linkFileName, targetFileName);
+        
+        var link = new FileInfo(linkFileName);
+
+        Assert.IsTrue(link.Exists);
+#if NET6_0_OR_GREATER
+        Assert.AreEqual(targetFileName, link.LinkTarget);
+#else
+        Assert.AreEqual(targetFileName, FileSystemLink.GetFileLinkTarget(linkFileName));
+#endif
+    }
+
     [TestMethod, ExpectedException(typeof(ArgumentNullException))]
     public void WhenPathIsNull_Throw()
     {

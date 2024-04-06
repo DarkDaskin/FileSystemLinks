@@ -120,6 +120,45 @@ public class GetDirectoryLinkTargetTests : TestBase
     }
 
     [TestMethod]
+    public void WhenLinkIsJunctionAndTargetExists_ReturnFirstTarget()
+    {
+        if (!IsWindows())
+        {
+            Assert.Inconclusive();
+            return;
+        }
+
+        var targetDirectoryPath = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
+        var intermediateLinkDirectoryPath = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
+        var linkDirectoryPath = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
+        Directory.CreateDirectory(targetDirectoryPath);
+        FileSystemLink.CreateJunction(intermediateLinkDirectoryPath, targetDirectoryPath);
+        FileSystemLink.CreateJunction(linkDirectoryPath, intermediateLinkDirectoryPath);
+
+        var returnedTarget = FileSystemLink.GetFileLinkTarget(linkDirectoryPath);
+
+        Assert.AreEqual(intermediateLinkDirectoryPath, returnedTarget);
+    }
+
+    [TestMethod]
+    public void WhenLinkIsJunctionAndTargetDoesNotExist_ReturnTarget()
+    {
+        if (!IsWindows())
+        {
+            Assert.Inconclusive();
+            return;
+        }
+
+        var targetDirectoryPath = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
+        var linkDirectoryPath = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
+        FileSystemLink.CreateJunction(linkDirectoryPath, targetDirectoryPath);
+
+        var returnedTarget = FileSystemLink.GetFileLinkTarget(linkDirectoryPath);
+
+        Assert.AreEqual(targetDirectoryPath, returnedTarget);
+    }
+
+    [TestMethod]
     public void WhenPathIsPlainFile_ReturnNull()
     {
         var linkDirectoryPath = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
