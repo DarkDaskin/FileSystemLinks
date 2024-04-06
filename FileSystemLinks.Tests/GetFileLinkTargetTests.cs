@@ -76,6 +76,50 @@ public class GetFileLinkTargetTests : TestBase
     }
 
     [TestMethod]
+    public void WhenLinkIsSymbolicAndTargetIsRelativeUpper_ReturnTarget()
+    {
+        var targetFileName = UnicodeString + Path.GetRandomFileName();
+        var linkSubDirectory = Path.GetRandomFileName();
+        var linkFileName = Path.Combine(linkSubDirectory, UnicodeString + Path.GetRandomFileName());
+        var targetRelativeFileName = Path.Combine("..", targetFileName);
+        Directory.CreateDirectory(linkSubDirectory);
+#if NET6_0_OR_GREATER
+        File.CreateSymbolicLink(linkFileName, targetRelativeFileName);
+#else
+        FileSystemLink.CreateFileSymbolicLink(linkFileName, targetRelativeFileName);
+#endif
+
+        var returnedTarget = FileSystemLink.GetFileLinkTarget(linkFileName);
+
+        Assert.AreEqual(targetRelativeFileName, returnedTarget);
+    }
+
+    [TestMethod]
+    public void WhenLinkIsSymbolicAndTargetIsInaccessible_ReturnTarget()
+    {
+        var targetFileName = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
+        var linkFileName = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
+        File.WriteAllText(targetFileName, "test");
+#if NET6_0_OR_GREATER
+        File.CreateSymbolicLink(linkFileName, targetFileName);
+#else
+        FileSystemLink.CreateFileSymbolicLink(linkFileName, targetFileName);
+#endif
+        MakeFileInaccessible(targetFileName);
+
+        try
+        {
+            var returnedTarget = FileSystemLink.GetFileLinkTarget(linkFileName);
+
+            Assert.AreEqual(targetFileName, returnedTarget);
+        }
+        finally
+        {
+            MakeFileAccessible(targetFileName);
+        }
+    }
+
+    [TestMethod]
     public void WhenPathIsPlainFile_ReturnNull()
     {
         var linkFileName = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());

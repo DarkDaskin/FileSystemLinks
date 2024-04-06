@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace FileSystemLinks;
 
@@ -40,27 +41,41 @@ public static class FileSystemLink
         FileSystem.CreateSymbolicLink(path, pathToTarget, true);
     }
 
-    public static string? GetFileLinkTarget(string path)
+    public static string? GetFileLinkTarget(string linkPath)
     {
-        VerifyValidPath(path, nameof(path));
+        VerifyValidPath(linkPath, nameof(linkPath));
 
-        return FileSystem.GetLinkTarget(path, false);
+        return FileSystem.GetLinkTarget(linkPath, false);
     }
 
-    public static string? GetDirectoryLinkTarget(string path)
+    public static string? GetDirectoryLinkTarget(string linkPath)
     {
-        VerifyValidPath(path, nameof(path));
+        VerifyValidPath(linkPath, nameof(linkPath));
 
-        return FileSystem.GetLinkTarget(path, true);
+        return FileSystem.GetLinkTarget(linkPath, true);
     }
 
-    private static void VerifyValidPath(string path, string argName)
+    public static FileSystemInfo? ResolveFileLinkTarget(string linkPath, bool returnFinalTarget) => 
+        ResolveLinkTarget(linkPath, returnFinalTarget, false);
+
+    public static FileSystemInfo? ResolveDirectoryLinkTarget(string linkPath, bool returnFinalTarget) => 
+        ResolveLinkTarget(linkPath, returnFinalTarget, true);
+
+    private static FileSystemInfo? ResolveLinkTarget(string linkPath, bool returnFinalTarget, bool isDirectory)
+    {
+        VerifyValidPath(linkPath, nameof(linkPath));
+
+        var linkTarget = FileSystem.ResolveLinkTarget(linkPath, returnFinalTarget, isDirectory);
+        return linkTarget is null ? null : isDirectory ? new DirectoryInfo(linkTarget) : new FileInfo(linkTarget);
+    }
+
+    private static void VerifyValidPath(string path, string paramName)
     {
         if (path is null)
-            throw new ArgumentNullException(nameof(path));
+            throw new ArgumentNullException(paramName);
         if (string.IsNullOrWhiteSpace(path))
-            throw new ArgumentException("The path is empty.", nameof(path));
+            throw new ArgumentException("The path is empty.", paramName);
         if (path.Contains("\0"))
-            throw new ArgumentException("Illegal characters in path.", argName);
+            throw new ArgumentException("Illegal characters in path.", paramName);
     }
 }

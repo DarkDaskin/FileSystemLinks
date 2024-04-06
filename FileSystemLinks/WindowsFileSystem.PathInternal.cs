@@ -22,6 +22,10 @@ internal partial class WindowsFileSystem
         private const int MaxShortPath = 260;
         // \\?\, \\.\, \??\
         private const int DevicePrefixLength = 4;
+        // \\
+        private const int UncPrefixLength = 2;
+        // \\?\UNC\, \\.\UNC\
+        private const int UncExtendedPrefixLength = 8;
 
         /// <summary>
         /// Adds the extended path prefix (\\?\) if not already a device path, IF the path is not relative,
@@ -151,11 +155,25 @@ internal partial class WindowsFileSystem
         }
 
         /// <summary>
+        /// Returns true if the path is a device UNC (\\?\UNC\, \\.\UNC\)
+        /// </summary>
+        // ReSharper disable once InconsistentNaming
+        private static bool IsDeviceUNC(string path)
+        {
+            return path.Length >= UncExtendedPrefixLength
+                   && IsDevice(path)
+                   && IsDirectorySeparator(path[7])
+                   && path[4] == 'U'
+                   && path[5] == 'N'
+                   && path[6] == 'C';
+        }
+
+        /// <summary>
         /// Returns true if the path uses the canonical form of extended syntax ("\\?\" or "\??\"). If the
         /// path matches exactly (cannot use alternate directory separators) Windows will skip normalization
         /// and path length checks.
         /// </summary>
-        private static bool IsExtended(string path)
+        public static bool IsExtended(string path)
         {
             // While paths like "//?/C:/" will work, they're treated the same as "\\.\" paths.
             // Skipping of normalization will *only* occur if back slashes ('\') are used.
@@ -164,6 +182,84 @@ internal partial class WindowsFileSystem
                    && (path[1] == '\\' || path[1] == '?')
                    && path[2] == '?'
                    && path[3] == '\\';
+        }
+
+        /// <summary>
+        /// Trims one trailing directory separator beyond the root of the path.
+        /// </summary>
+        [return: NotNullIfNotNull(nameof(path))]
+        public static string? TrimEndingDirectorySeparator(string? path) =>
+            EndsInDirectorySeparator(path) && !IsRoot(path) ?
+                path!.Substring(0, path.Length - 1) :
+                path;
+
+        /// <summary>
+        /// Returns true if the path ends in a directory separator.
+        /// </summary>
+        private static bool EndsInDirectorySeparator([NotNullWhen(true)] string? path) =>
+            !string.IsNullOrEmpty(path) && IsDirectorySeparator(path![path.Length - 1]);
+
+        private static bool IsRoot(string path)
+            => path.Length == GetRootLength(path);
+
+        /// <summary>
+        /// Gets the length of the root of the path (drive, share, etc.).
+        /// </summary>
+        private static int GetRootLength(string path)
+        {
+            int pathLength = path.Length;
+            int i = 0;
+
+            bool deviceSyntax = IsDevice(path);
+            bool deviceUnc = deviceSyntax && IsDeviceUNC(path);
+
+            if ((!deviceSyntax || deviceUnc) && pathLength > 0 && IsDirectorySeparator(path[0]))
+            {
+                // UNC or simple rooted path (e.g. "\foo", NOT "\\?\C:\foo")
+                if (deviceUnc || (pathLength > 1 && IsDirectorySeparator(path[1])))
+                {
+                    // UNC (\\?\UNC\ or \\), scan past server\share
+
+                    // Start past the prefix ("\\" or "\\?\UNC\")
+                    i = deviceUnc ? UncExtendedPrefixLength : UncPrefixLength;
+
+                    // Skip two separators at most
+                    int n = 2;
+                    while (i < pathLength && (!IsDirectorySeparator(path[i]) || --n > 0))
+                        i++;
+                }
+                else
+                {
+                    // Current drive rooted (e.g. "\foo")
+                    i = 1;
+                }
+            }
+            else if (deviceSyntax)
+            {
+                // Device path (e.g. "\\?\.", "\\.\")
+                // Skip any characters following the prefix that aren't a separator
+                i = DevicePrefixLength;
+                while (i < pathLength && !IsDirectorySeparator(path[i]))
+                    i++;
+
+                // If there is another separator take it, as long as we have had at least one
+                // non-separator after the prefix (e.g. don't take "\\?\\", but take "\\?\a\")
+                if (i < pathLength && i > DevicePrefixLength && IsDirectorySeparator(path[i]))
+                    i++;
+            }
+            else if (pathLength >= 2
+                && path[1] == VolumeSeparatorChar
+                && IsValidDriveChar(path[0]))
+            {
+                // Valid drive specified path ("C:", "D:", etc.)
+                i = 2;
+
+                // If the colon is followed by a directory separator, move past it (e.g "C:\")
+                if (pathLength > 2 && IsDirectorySeparator(path[2]))
+                    i++;
+            }
+
+            return i;
         }
     }
 }

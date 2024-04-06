@@ -33,4 +33,14 @@ public static class FileSystemInfoExtensions
             ? FileSystemLink.GetDirectoryLinkTarget(fileSystemInfo.FullName)
             : FileSystemLink.GetFileLinkTarget(fileSystemInfo.FullName);
     }
+
+    public static FileSystemInfo? ResolveLinkTarget(this FileSystemInfo fileSystemInfo, bool returnFinalTarget)
+    {
+        if (fileSystemInfo is null)
+            throw new ArgumentNullException(nameof(fileSystemInfo));
+
+        return fileSystemInfo is DirectoryInfo
+            ? FileSystemLink.ResolveDirectoryLinkTarget(fileSystemInfo.FullName, returnFinalTarget)
+            : FileSystemLink.ResolveFileLinkTarget(fileSystemInfo.FullName, returnFinalTarget);
+    }
 }
