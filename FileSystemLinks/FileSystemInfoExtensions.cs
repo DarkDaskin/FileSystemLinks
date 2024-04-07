@@ -160,4 +160,22 @@ public static class FileSystemInfoExtensions
             ? FileSystemLink.ResolveDirectoryLinkTarget(fileSystemInfo.FullName, returnFinalTarget)
             : FileSystemLink.ResolveFileLinkTarget(fileSystemInfo.FullName, returnFinalTarget);
     }
+
+    /// <summary>
+    /// Gets the type the link represented by <paramref name="fileSystemInfo"/>.
+    /// </summary>
+    /// <param name="fileSystemInfo">A <see cref="FileSystemInfo"/> instance representing the file or directory to inspect.</param>
+    /// <returns>
+    /// The type of the file link located at <paramref name="fileSystemInfo"/>.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// <paramref name="fileSystemInfo"/> is <see langword="null"/>.
+    /// </exception>
+    public static LinkType GetLinkType(this FileSystemInfo fileSystemInfo)
+    {
+        if (fileSystemInfo is null)
+            throw new ArgumentNullException(nameof(fileSystemInfo));
+
+        return FileSystemLink.GetLinkType(fileSystemInfo.FullName);
+    }
 }

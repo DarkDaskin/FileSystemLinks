@@ -5,8 +5,10 @@ using System.Buffers;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
+using FILETIME = System.Runtime.InteropServices.ComTypes.FILETIME;
 
 namespace FileSystemLinks;
 
@@ -149,6 +151,22 @@ internal partial class WindowsFileSystem : IFileSystem
         return returnFinalTarget
             ? GetFinalLinkTarget(linkPath, isDirectory)
             : GetImmediateLinkTarget(linkPath, isDirectory, throwOnError: true, returnFullPath: true);
+    }
+
+    public LinkType GetLinkType(string linkPath)
+    {
+        linkPath = PathInternal.EnsureExtendedPrefixIfNeeded(linkPath);
+
+        using var findHandle = FindFirstFileNative(linkPath, out var findData);
+        if (findHandle.IsInvalid || (findData.dwFileAttributes & (int)FileAttributes.ReparsePoint) == 0)
+            return LinkType.None;
+
+        return findData.dwReserved0 switch
+        {
+            IO_REPARSE_TAG_SYMLINK => LinkType.SymbolicLink,
+            IO_REPARSE_TAG_MOUNT_POINT => LinkType.Junction,
+            _ => LinkType.None,
+        };
     }
 
     /// <summary>
@@ -448,9 +466,9 @@ internal partial class WindowsFileSystem : IFileSystem
     private struct WIN32_FIND_DATA
     {
         internal uint dwFileAttributes;
-        internal long ftCreationTime;
-        internal long ftLastAccessTime;
-        internal long ftLastWriteTime;
+        internal FILETIME ftCreationTime;
+        internal FILETIME ftLastAccessTime;
+        internal FILETIME ftLastWriteTime;
         internal uint nFileSizeHigh;
         internal uint nFileSizeLow;
         internal uint dwReserved0;

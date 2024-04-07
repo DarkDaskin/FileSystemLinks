@@ -77,6 +77,13 @@ internal partial class UnixFileSystem : IFileSystem
         return sb.ToString();
     }
 
+    public LinkType GetLinkType(string linkPath)
+    {
+        if (ReadLink(linkPath) is not null)
+            return LinkType.SymbolicLink;
+        return LinkType.None;
+    }
+
     private static string? ReadLink(string linkPath)
     {
 #if NETSTANDARD2_1_OR_GREATER

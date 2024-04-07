@@ -7,4 +7,5 @@ internal interface IFileSystem
     void CreateJunction(string path, string pathToTarget);
     string? GetLinkTarget(string linkPath, bool isDirectory);
     string? ResolveLinkTarget(string linkPath, bool returnFinalTarget, bool isDirectory);
+    LinkType GetLinkType(string linkPath);
 }

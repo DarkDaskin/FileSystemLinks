@@ -246,6 +246,18 @@ public static class FileSystemLink
     public static FileSystemInfo? ResolveDirectoryLinkTarget(string linkPath, bool returnFinalTarget) => 
         ResolveLinkTarget(linkPath, returnFinalTarget, true);
 
+    /// <summary>
+    /// Gets the type the link located at <paramref name="linkPath"/>.
+    /// </summary>
+    /// <param name="linkPath">The path of the file or directory to inspect.</param>
+    /// <returns>The type the link located at <paramref name="linkPath"/></returns>
+    public static LinkType GetLinkType(string linkPath)
+    {
+        VerifyValidPath(linkPath, nameof(linkPath));
+
+        return FileSystem.GetLinkType(linkPath);
+    }
+
     private static FileSystemInfo? ResolveLinkTarget(string linkPath, bool returnFinalTarget, bool isDirectory)
     {
         VerifyValidPath(linkPath, nameof(linkPath));
