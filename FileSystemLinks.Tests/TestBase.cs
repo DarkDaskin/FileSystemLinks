@@ -70,7 +70,7 @@ public class TestBase
 #if NET5_0_OR_GREATER
         return OperatingSystem.IsWindows();
 #elif NETFRAMEWORK
-        return true;
+        return Environment.OSVersion.Platform == PlatformID.Win32NT;
 #else
         Assert.Inconclusive();
         return false;
@@ -90,9 +90,14 @@ public class TestBase
         else
             File.SetUnixFileMode(fileName, UnixFileMode.None);
 #elif NETFRAMEWORK
-        var fileSecurity = File.GetAccessControl(fileName);
-        fileSecurity.SetAccessRule(GetDenyAccessRule());
-        File.SetAccessControl(fileName, fileSecurity);
+        if (IsWindows())
+        {
+            var fileSecurity = File.GetAccessControl(fileName);
+            fileSecurity.SetAccessRule(GetDenyAccessRule());
+            File.SetAccessControl(fileName, fileSecurity);            
+        }
+        else
+            Assert.Inconclusive();
 #else
         Assert.Inconclusive();
 #endif
@@ -111,9 +116,14 @@ public class TestBase
         else
             File.SetUnixFileMode(fileName, AllFileAccess);
 #elif NETFRAMEWORK
-        var fileSecurity = File.GetAccessControl(fileName);
-        fileSecurity.RemoveAccessRule(GetDenyAccessRule());
-        File.SetAccessControl(fileName, fileSecurity);
+        if (IsWindows())
+        {
+            var fileSecurity = File.GetAccessControl(fileName);
+            fileSecurity.RemoveAccessRule(GetDenyAccessRule());
+            File.SetAccessControl(fileName, fileSecurity);
+        }
+        else
+            Assert.Inconclusive();
 #else
         Assert.Inconclusive();
 #endif
@@ -132,9 +142,14 @@ public class TestBase
         else
             File.SetUnixFileMode(path, UnixFileMode.None);
 #elif NETFRAMEWORK
-        var directorySecurity = Directory.GetAccessControl(path);
-        directorySecurity.SetAccessRule(GetDenyAccessRule());
-        Directory.SetAccessControl(path, directorySecurity);
+        if (IsWindows())
+        {
+            var directorySecurity = Directory.GetAccessControl(path);
+            directorySecurity.SetAccessRule(GetDenyAccessRule());
+            Directory.SetAccessControl(path, directorySecurity);
+        }
+        else
+            Assert.Inconclusive();
 #else
         Assert.Inconclusive();
 #endif
@@ -153,9 +168,14 @@ public class TestBase
         else
             File.SetUnixFileMode(path, AllFileAccess);
 #elif NETFRAMEWORK
-        var directorySecurity = Directory.GetAccessControl(path);
-        directorySecurity.RemoveAccessRule(GetDenyAccessRule());
-        Directory.SetAccessControl(path, directorySecurity);
+        if (IsWindows())
+        {
+            var directorySecurity = Directory.GetAccessControl(path);
+            directorySecurity.RemoveAccessRule(GetDenyAccessRule());
+            Directory.SetAccessControl(path, directorySecurity);
+        }
+        else
+            Assert.Inconclusive();
 #else
         Assert.Inconclusive();
 #endif
