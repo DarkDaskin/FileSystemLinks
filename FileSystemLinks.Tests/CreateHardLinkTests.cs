@@ -87,6 +87,19 @@ public class CreateHardLinkTests : TestBase
         FileSystemLink.CreateHardLink(sourceFileName, destFileName);
     }
 
+    [TestMethod, ExpectedException(typeof(UnauthorizedAccessException))]
+    public void WhenSourceFileIsADirectory_Throw()
+    {
+        var sourceFileName = Path.Combine(WorkDirectoryPath, Path.GetRandomFileName());
+        var destFileName = Path.Combine(WorkDirectoryPath, Path.GetRandomFileName());
+        Directory.CreateDirectory(sourceFileName);
+
+        Assert.IsTrue(Directory.Exists(sourceFileName));
+        Assert.IsFalse(File.Exists(destFileName));
+
+        FileSystemLink.CreateHardLink(sourceFileName, destFileName);
+    }
+
     [TestMethod, ExpectedException(typeof(IOException))]
     public void WhenDestFileExists_Throw()
     {
