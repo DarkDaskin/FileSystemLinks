@@ -1,5 +1,6 @@
 ﻿namespace FileSystemLinks.Tests;
 
+#pragma warning disable CA1416 // Validate platform compatibility - a check is made in TestInitialize.
 [TestClass]
 public class CreateJunctionTests : TestBase
 {

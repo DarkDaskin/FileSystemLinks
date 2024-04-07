@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.Versioning;
 
 namespace FileSystemLinks;
 
@@ -24,6 +25,9 @@ public static class FileSystemInfoExtensions
             FileSystemLink.CreateFileSymbolicLink(fileSystemInfo.FullName, pathToTarget);
     }
 
+#if NET5_0_OR_GREATER
+    [SupportedOSPlatform("windows")]
+#endif
     public static void CreateAsJunction(this DirectoryInfo directoryInfo, string pathToTarget)
     {
         if (directoryInfo is null)

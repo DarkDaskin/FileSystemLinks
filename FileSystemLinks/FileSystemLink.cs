@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.Versioning;
 
 namespace FileSystemLinks;
 
@@ -41,6 +42,9 @@ public static class FileSystemLink
         FileSystem.CreateSymbolicLink(path, pathToTarget, true);
     }
 
+#if NET5_0_OR_GREATER
+    [SupportedOSPlatform("windows")]
+#endif
     public static void CreateJunction(string path, string pathToTarget)
     {
         VerifyValidPath(path, nameof(path));

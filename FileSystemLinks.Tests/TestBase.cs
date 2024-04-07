@@ -65,6 +65,9 @@ public class TestBase
         }
     }
 
+#if NET5_0_OR_GREATER
+    [SupportedOSPlatformGuard("windows")]
+#endif
     protected static bool IsWindows()
     {
 #if NET5_0_OR_GREATER

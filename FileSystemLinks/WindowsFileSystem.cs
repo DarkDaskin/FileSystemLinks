@@ -5,7 +5,6 @@ using System.Buffers;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 using Microsoft.Win32.SafeHandles;
 
@@ -373,7 +372,7 @@ internal partial class WindowsFileSystem : IFileSystem
             return new IOException(exception.Message, exception.HResult);
         if (exception is FileNotFoundException && isDirectory)
             return new DirectoryNotFoundException();
-        return exception;
+        return exception!;
     }
 
     [DllImport("kernel32", EntryPoint = "CreateHardLinkW", CharSet = CharSet.Unicode, SetLastError = true)]
@@ -449,9 +448,9 @@ internal partial class WindowsFileSystem : IFileSystem
     private struct WIN32_FIND_DATA
     {
         internal uint dwFileAttributes;
-        internal FILETIME ftCreationTime;
-        internal FILETIME ftLastAccessTime;
-        internal FILETIME ftLastWriteTime;
+        internal long ftCreationTime;
+        internal long ftLastAccessTime;
+        internal long ftLastWriteTime;
         internal uint nFileSizeHigh;
         internal uint nFileSizeLow;
         internal uint dwReserved0;
