@@ -145,9 +145,10 @@ internal partial class UnixFileSystem : IFileSystem
         var error = PosixErrorResolver.GetErrorFromNativeErrorCode(errorCode);
         return error switch
         {
+            PosixError.ENOTDIR => new DirectoryNotFoundException(message),
             PosixError.ENOENT when isDirectory => new DirectoryNotFoundException(message),
             PosixError.ENOENT => new FileNotFoundException(message),
-            PosixError.EACCES => new UnauthorizedAccessException(message),
+            PosixError.EACCES or PosixError.EBADF or PosixError.EPERM => new UnauthorizedAccessException(message),
             PosixError.ENAMETOOLONG => new PathTooLongException(message),
             _ => new IOException(message)
         };

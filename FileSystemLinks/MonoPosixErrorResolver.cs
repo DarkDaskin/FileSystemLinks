@@ -12,10 +12,13 @@ internal class MonoPosixErrorResolver : IPosixErrorResolver
         return monoError switch
         {
             MonoPosixError.EACCES => PosixError.EACCES,
+            MonoPosixError.EBADF => PosixError.EBADF,
             MonoPosixError.EINVAL => PosixError.EINVAL,
             MonoPosixError.ELOOP => PosixError.ELOOP,
             MonoPosixError.ENAMETOOLONG => PosixError.ENAMETOOLONG,
             MonoPosixError.ENOENT => PosixError.ENOENT,
+            MonoPosixError.ENOTDIR => PosixError.ENOTDIR,
+            MonoPosixError.EPERM => PosixError.EPERM,
             _ => PosixError.UnknownError + errorCode,
         };
     }
@@ -27,10 +30,13 @@ internal class MonoPosixErrorResolver : IPosixErrorResolver
         var monoError = error switch
         {
             PosixError.EACCES => MonoPosixError.EACCES,
+            PosixError.EBADF => MonoPosixError.EBADF,
             PosixError.EINVAL => MonoPosixError.EINVAL,
             PosixError.ELOOP => MonoPosixError.ELOOP,
             PosixError.ENAMETOOLONG => MonoPosixError.ENAMETOOLONG,
             PosixError.ENOENT => MonoPosixError.ENOENT,
+            PosixError.ENOTDIR => MonoPosixError.ENOTDIR,
+            PosixError.EPERM => MonoPosixError.EPERM,
             _ => throw new ArgumentOutOfRangeException(nameof(error))
         };
         if (FromErrnoNative(monoError, out var errorCode) != 0)
@@ -59,10 +65,13 @@ internal class MonoPosixErrorResolver : IPosixErrorResolver
     {
         // ReSharper disable InconsistentNaming
         EACCES = 13,
+        EBADF = 9,
         EINVAL = 22,
         ELOOP = 40,
         ENAMETOOLONG = 36,
         ENOENT = 2,
+        ENOTDIR = 20,
+        EPERM = 1,
         // ReSharper restore InconsistentNaming
     }
 
