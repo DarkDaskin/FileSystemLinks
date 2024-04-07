@@ -39,7 +39,7 @@ internal partial class UnixFileSystem : IFileSystem
         {
             var error = Marshal.GetLastWin32Error();
             // Not a link, return null
-            if (error == (int)ErrorCode.EINVAL)
+            if (error == ErrorCodes.EINVAL)
                 return null;
 
             throw GetExceptionForError(error, isDirectory);
@@ -59,7 +59,7 @@ internal partial class UnixFileSystem : IFileSystem
                 if (visitCount > MaxFollowedLinks)
                 {
                     // We went over the limit and couldn't reach the final target
-                    throw GetExceptionForError((int)ErrorCode.ELOOP, isDirectory);
+                    throw GetExceptionForError(ErrorCodes.ELOOP, isDirectory);
                 }
 
                 GetLinkTargetFullPath(sb, current);
@@ -138,19 +138,13 @@ internal partial class UnixFileSystem : IFileSystem
     {
         var messagePtr = GetErrorMessageNative(errorCode);
         var message = Marshal.PtrToStringAnsi(messagePtr);
-        switch ((ErrorCode)errorCode)
-        {
-            case ErrorCode.ENOENT when isDirectory:
-                return new DirectoryNotFoundException(message);
-            case ErrorCode.ENOENT:
-                return new FileNotFoundException(message);
-            case ErrorCode.EACCES:
-                return new UnauthorizedAccessException(message);
-            case ErrorCode.ENAMETOOLONG:
-                return new PathTooLongException(message);
-            default:
-                return new IOException(message);
-        }
+        if (errorCode == ErrorCodes.ENOENT)
+            return isDirectory ? new DirectoryNotFoundException(message) : new FileNotFoundException(message);
+        if (errorCode == ErrorCodes.EACCES)
+            return new UnauthorizedAccessException(message);
+        if (errorCode == ErrorCodes.ENAMETOOLONG)
+            return new PathTooLongException(message);
+        return new IOException(message);
     }
 
     [DllImport("libc", EntryPoint = "link", CharSet = CharSet.Ansi, SetLastError = true)]
@@ -169,15 +163,38 @@ internal partial class UnixFileSystem : IFileSystem
     [DllImport("libc", EntryPoint = "strerror")]
     private static extern IntPtr GetErrorMessageNative(int errnum);
 
-    private enum ErrorCode
+    private static class ErrorCodes
     {
         // ReSharper disable InconsistentNaming
-        ENOENT = 2,
-        EACCES = 13,
-        EINVAL = 22,
-        ENAMETOOLONG = 36,
-        ELOOP = 40,
+        public static readonly int ENOENT;
+        public static readonly int EACCES;
+        public static readonly int EINVAL;
+        public static readonly int ENAMETOOLONG;
+        public static readonly int ELOOP;
         // ReSharper restore InconsistentNaming
+
+        static ErrorCodes()
+        {
+            switch (Environment.OSVersion.Platform)
+            {
+                case PlatformID.Unix:
+                    ENOENT = 2;
+                    EACCES = 13;
+                    EINVAL = 22;
+                    ENAMETOOLONG = 36;
+                    ELOOP = 40;
+                    break;
+                case PlatformID.MacOSX:
+                    ENOENT = 2;
+                    EACCES = 13;
+                    EINVAL = 22;
+                    ENAMETOOLONG = 63;
+                    ELOOP = 62;
+                    break;
+                default:
+                    throw new PlatformNotSupportedException();
+            }
+        }
     }
 
     // Unix max paths are typically 1K or 4K UTF-8 bytes, 256 should handle the majority of paths
