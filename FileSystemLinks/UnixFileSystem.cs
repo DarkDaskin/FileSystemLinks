@@ -29,6 +29,8 @@ internal partial class UnixFileSystem : IFileSystem
 
     public string? ResolveLinkTarget(string linkPath, bool returnFinalTarget, bool isDirectory)
     {
+        linkPath = Path.GetFullPath(linkPath);
+
         var sb = new StringBuilder(DefaultPathBufferSize);
         sb.Append(linkPath);
 

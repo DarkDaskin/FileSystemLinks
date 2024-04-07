@@ -122,8 +122,14 @@ public class ResolveFileLinkTargetTests : TestBase
     }
 
     [TestMethod, ExpectedException(typeof(UnauthorizedAccessException))]
-    public void WhenLinkIsSymbolicAndTargetIsInaccessible_Throw()
+    public void WhenLinkIsSymbolicAndTargetIsInaccessible_ThrowOnWindows()
     {
+        if (!IsWindows())
+        {
+            Assert.Inconclusive();
+            return;
+        }
+
         var targetFileName = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
         var linkFileName = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
         File.WriteAllText(targetFileName, "test");

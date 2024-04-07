@@ -1,4 +1,6 @@
-﻿namespace FileSystemLinks.Tests;
+﻿using System.Diagnostics;
+
+namespace FileSystemLinks.Tests;
 
 [TestClass]
 public class ResolveDirectoryLinkTargetTests : TestBase
@@ -122,8 +124,14 @@ public class ResolveDirectoryLinkTargetTests : TestBase
     }
 
     [TestMethod, ExpectedException(typeof(UnauthorizedAccessException))]
-    public void WhenLinkIsSymbolicAndTargetIsInaccessible_Throw()
+    public void WhenLinkIsSymbolicAndTargetIsInaccessible_ThrowOnWindows()
     {
+        if (!IsWindows())
+        {
+            Assert.Inconclusive();
+            return;
+        }
+
         var targetDirectoryPath = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
         var linkDirectoryPath = Path.Combine(WorkDirectoryPath, UnicodeString + Path.GetRandomFileName());
         Directory.CreateDirectory(targetDirectoryPath);
