@@ -11,6 +11,11 @@ namespace FileSystemLinks;
 
 internal partial class UnixFileSystem : IFileSystem
 {
+    private static readonly IPosixErrorResolver PosixErrorResolver =
+        Type.GetType("Mono.Runtime") is not null 
+            ? new MonoPosixErrorResolver() 
+            : new NetCorePosixErrorResolver();
+
     public void CreateHardLink(string sourceFileName, string destFileName)
     {
         if (CreateHardLinkNative(sourceFileName, destFileName) < 0)
@@ -37,12 +42,12 @@ internal partial class UnixFileSystem : IFileSystem
         string? linkTarget = ReadLink(linkPath);
         if (linkTarget == null)
         {
-            var error = Marshal.GetLastWin32Error();
+            var errorCode = Marshal.GetLastWin32Error();
             // Not a link, return null
-            if (error == ErrorCodes.EINVAL)
+            if (PosixErrorResolver.GetErrorFromNativeErrorCode(errorCode) == PosixError.EINVAL)
                 return null;
 
-            throw GetExceptionForError(error, isDirectory);
+            throw GetExceptionForError(errorCode, isDirectory);
         }
 
         if (!returnFinalTarget)
@@ -59,7 +64,7 @@ internal partial class UnixFileSystem : IFileSystem
                 if (visitCount > MaxFollowedLinks)
                 {
                     // We went over the limit and couldn't reach the final target
-                    throw GetExceptionForError(ErrorCodes.ELOOP, isDirectory);
+                    throw GetExceptionForError(PosixErrorResolver.GetNativeErrorCodeFromError(PosixError.ELOOP), isDirectory);
                 }
 
                 GetLinkTargetFullPath(sb, current);
@@ -136,15 +141,16 @@ internal partial class UnixFileSystem : IFileSystem
 
     private static Exception GetExceptionForError(int errorCode, bool isDirectory)
     {
-        var messagePtr = GetErrorMessageNative(errorCode);
-        var message = Marshal.PtrToStringAnsi(messagePtr);
-        if (errorCode == ErrorCodes.ENOENT)
-            return isDirectory ? new DirectoryNotFoundException(message) : new FileNotFoundException(message);
-        if (errorCode == ErrorCodes.EACCES)
-            return new UnauthorizedAccessException(message);
-        if (errorCode == ErrorCodes.ENAMETOOLONG)
-            return new PathTooLongException(message);
-        return new IOException(message);
+        var message = PosixErrorResolver.GetStringFromNativeErrorCode(errorCode);
+        var error = PosixErrorResolver.GetErrorFromNativeErrorCode(errorCode);
+        return error switch
+        {
+            PosixError.ENOENT when isDirectory => new DirectoryNotFoundException(message),
+            PosixError.ENOENT => new FileNotFoundException(message),
+            PosixError.EACCES => new UnauthorizedAccessException(message),
+            PosixError.ENAMETOOLONG => new PathTooLongException(message),
+            _ => new IOException(message)
+        };
     }
 
     [DllImport("libc", EntryPoint = "link", CharSet = CharSet.Ansi, SetLastError = true)]
@@ -159,43 +165,6 @@ internal partial class UnixFileSystem : IFileSystem
 #else
     private static extern int ReadLinkNative(string pathname, [Out] byte[] buf, IntPtr bufsiz);
 #endif
-
-    [DllImport("libc", EntryPoint = "strerror")]
-    private static extern IntPtr GetErrorMessageNative(int errnum);
-
-    private static class ErrorCodes
-    {
-        // ReSharper disable InconsistentNaming
-        public static readonly int ENOENT;
-        public static readonly int EACCES;
-        public static readonly int EINVAL;
-        public static readonly int ENAMETOOLONG;
-        public static readonly int ELOOP;
-        // ReSharper restore InconsistentNaming
-
-        static ErrorCodes()
-        {
-            switch (Environment.OSVersion.Platform)
-            {
-                case PlatformID.Unix:
-                    ENOENT = 2;
-                    EACCES = 13;
-                    EINVAL = 22;
-                    ENAMETOOLONG = 36;
-                    ELOOP = 40;
-                    break;
-                case PlatformID.MacOSX:
-                    ENOENT = 2;
-                    EACCES = 13;
-                    EINVAL = 22;
-                    ENAMETOOLONG = 63;
-                    ELOOP = 62;
-                    break;
-                default:
-                    throw new PlatformNotSupportedException();
-            }
-        }
-    }
 
     // Unix max paths are typically 1K or 4K UTF-8 bytes, 256 should handle the majority of paths
     // without putting too much pressure on the stack.
