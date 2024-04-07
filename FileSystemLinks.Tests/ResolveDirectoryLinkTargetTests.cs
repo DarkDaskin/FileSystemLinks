@@ -65,7 +65,7 @@ public class ResolveDirectoryLinkTargetTests : TestBase
         var returnedTarget = FileSystemLink.ResolveDirectoryLinkTarget(linkDirectoryPath, false);
 
         Assert.IsInstanceOfType<DirectoryInfo>(returnedTarget);
-        Assert.AreEqual(Path.Combine(WorkDirectoryPath, intermediateLinkDirectoryPath), returnedTarget.FullName);
+        Assert.AreEqual(Path.GetFullPath(intermediateLinkDirectoryPath), returnedTarget.FullName);
     }
 
     [TestMethod]
@@ -86,7 +86,7 @@ public class ResolveDirectoryLinkTargetTests : TestBase
         var returnedTarget = FileSystemLink.ResolveDirectoryLinkTarget(linkDirectoryPath, true);
 
         Assert.IsInstanceOfType<DirectoryInfo>(returnedTarget);
-        Assert.AreEqual(Path.Combine(WorkDirectoryPath, targetDirectoryPath), returnedTarget.FullName);
+        Assert.AreEqual(Path.GetFullPath(targetDirectoryPath), returnedTarget.FullName);
     }
 
     [TestMethod]
@@ -120,7 +120,7 @@ public class ResolveDirectoryLinkTargetTests : TestBase
         var returnedTarget = FileSystemLink.ResolveDirectoryLinkTarget(linkDirectoryPath, true);
 
         Assert.IsInstanceOfType<DirectoryInfo>(returnedTarget);
-        Assert.AreEqual(Path.Combine(WorkDirectoryPath, targetDirectoryPath), returnedTarget.FullName);
+        Assert.AreEqual(Path.GetFullPath(targetDirectoryPath), returnedTarget.FullName);
     }
 
     [TestMethod, ExpectedException(typeof(UnauthorizedAccessException))]
