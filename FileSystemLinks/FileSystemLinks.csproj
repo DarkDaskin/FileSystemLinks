@@ -4,6 +4,13 @@
     <TargetFrameworks>netstandard2.0;netstandard2.1;net5.0;net451</TargetFrameworks>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Authors>DarkDaskin</Authors>
+    <Description>A cross-platform library for creating and reading file system links.</Description>
+    <PackageTags>filesystem, io, link, symlink, hard, symbolic, junction</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/DarkDaskin/FileSystemLinks.git</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,6 +18,10 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="" />
   </ItemGroup>
 
 </Project>
